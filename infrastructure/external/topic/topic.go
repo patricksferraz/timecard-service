@@ -1,0 +1,9 @@
+package topic
+
+const (
+	NEW_EMPLOYEE            string = "NEW_EMPLOYEE"
+	NEW_COMPANY             string = "NEW_COMPANY"
+	ADD_EMPLOYEE_TO_COMPANY string = "ADD_EMPLOYEE_TO_COMPANY"
+)
+
+var CONSUMER_TOPICS = []string{NEW_EMPLOYEE, NEW_COMPANY, ADD_EMPLOYEE_TO_COMPANY}

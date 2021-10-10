@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package github.com.c_4u;
+
+option go_package = "/protofiles;pb";
+
+message FindClaimsByTokenRequest {
+    string access_token = 1;
+}
+
+message Claims {
+    string user_id = 1;
+    string username = 2;
+    string employee_id = 3;
+    repeated string roles = 4;
+}
+
+service AuthKeycloakAcl {
+    rpc FindClaimsByToken (FindClaimsByTokenRequest) returns (Claims);
+}

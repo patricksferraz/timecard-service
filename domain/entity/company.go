@@ -1,4 +1,4 @@
-package model
+package entity
 
 import (
 	"time"
@@ -11,20 +11,16 @@ func init() {
 }
 
 type Company struct {
-	Base      `valid:"required"`
-	Employees []*Employee `gorm:"many2many:company_employees" valid:"-"`
-	Timecards []*Timecard `gorm:"column:timecards;foreignKey:CompanyID" valid:"-"`
+	Base      `json:",inline" valid:"required"`
+	Employees []*Employee `json:"-" gorm:"many2many:companies_employees" valid:"-"`
 }
 
 func NewCompany(id string) (*Company, error) {
-
 	company := Company{}
-
 	company.ID = id
 	company.CreatedAt = time.Now()
 
-	err := company.isValid()
-	if err != nil {
+	if err := company.isValid(); err != nil {
 		return nil, err
 	}
 
