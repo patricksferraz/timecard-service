@@ -14,14 +14,15 @@ func init() {
 type Event struct {
 	Base     `json:",inline" valid:"required"`
 	Status   EventStatus `json:"status" gorm:"column:status;not null" valid:"eventStatus"`
-	Topic    *string     `json:"topic,omitempty" gorm:"column:topic;type:varchar(100)" valid:"-"`
-	Attempts *int        `json:"attemps,omitempty" gorm:"column:attempts" valid:"-"`
+	Resume   *string     `json:"resume,omitempty" gorm:"column:value;type:varchar(100)" valid:"-"`
+	Attempts int         `json:"attemps,omitempty" gorm:"column:attempts" valid:"-"`
 }
 
-func NewEvent(id, topic string) (*Event, error) {
+func NewEvent(id, resume string) (*Event, error) {
 	company := Event{
-		Topic:  &topic,
-		Status: EVENT_PENDING,
+		Resume:   &resume,
+		Status:   EVENT_PENDING,
+		Attempts: 1,
 	}
 	company.ID = id
 	company.CreatedAt = time.Now()
@@ -38,12 +39,24 @@ func (e *Event) isValid() error {
 	return err
 }
 
-func (e *Event) AddAttempt() {
-	if e.Attempts == nil {
-		e.Attempts = new(int)
+func (e *Event) AddAttempt() error {
+
+	if e.Status == EVENT_COMPLETED {
+		return errors.New("event is completed")
 	}
 
-	*e.Attempts++
+	if e.Status == EVENT_FAILED {
+		return errors.New("event is failed")
+	}
+
+	if e.Attempts >= 10 {
+		e.Status = EVENT_FAILED
+		return errors.New("event has reached the maximum number of attempts")
+	}
+
+	e.Attempts++
+
+	return nil
 }
 
 func (e *Event) Complete() error {
@@ -76,12 +89,4 @@ func (e *Event) Fail() error {
 	e.UpdatedAt = time.Now()
 	err := e.isValid()
 	return err
-}
-
-func (e *Event) IsCompleted() bool {
-	return e.Status == EVENT_COMPLETED
-}
-
-func (e *Event) IsFailed() bool {
-	return e.Status == EVENT_FAILED
 }

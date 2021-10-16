@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/c-4u/timecard-service/application/kafka/schema"
+	"github.com/c-4u/timecard-service/domain/entity"
 	"github.com/c-4u/timecard-service/domain/service"
 	"github.com/c-4u/timecard-service/infrastructure/external"
 	"github.com/c-4u/timecard-service/infrastructure/external/topic"
@@ -36,27 +37,71 @@ func (p *KafkaProcessor) Consume() {
 	}
 }
 
+func (p *KafkaProcessor) processEvent(msg *ckafka.Message) (*entity.Event, error) {
+	event := &schema.Event{}
+	err := event.ParseJson(msg.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	e, err := p.Service.ProcessEvent(context.TODO(), event.ID, msg.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return e, nil
+}
+
+func (p *KafkaProcessor) completeEvent(event *entity.Event) error {
+	err := p.Service.CompleteEvent(context.TODO(), event.ID)
+	return err
+}
+
 func (p *KafkaProcessor) processMessage(msg *ckafka.Message) {
+
+	event, err := p.processEvent(msg)
+	if err != nil {
+		fmt.Println("event processing error ", err)
+	}
+
 	switch _topic := *msg.TopicPartition.Topic; _topic {
 	case topic.NEW_EMPLOYEE:
 		// TODO: add fault tolerance
 		err := p.createEmployee(msg)
 		if err != nil {
 			fmt.Println("creation error ", err)
+			p.retry(msg)
 		}
 	case topic.NEW_COMPANY:
 		err := p.createCompany(msg)
 		if err != nil {
 			fmt.Println("creation error ", err)
+			p.retry(msg)
 		}
 	case topic.ADD_EMPLOYEE_TO_COMPANY:
 		err := p.addEmployeeToCompany(msg)
 		if err != nil {
 			fmt.Println("addition error ", err)
+			p.retry(msg)
 		}
 	default:
 		fmt.Println("not a valid topic", string(msg.Value))
 	}
+
+	err = p.completeEvent(event)
+	if err != nil {
+		fmt.Println("event completion error ", err)
+	}
+}
+
+func (p *KafkaProcessor) retry(msg *ckafka.Message) error {
+	err := p.Kc.Consumer.Seek(ckafka.TopicPartition{
+		Topic:     msg.TopicPartition.Topic,
+		Partition: msg.TopicPartition.Partition,
+		Offset:    msg.TopicPartition.Offset,
+	}, -1)
+
+	return err
 }
 
 func (p *KafkaProcessor) createEmployee(msg *ckafka.Message) error {
@@ -66,18 +111,7 @@ func (p *KafkaProcessor) createEmployee(msg *ckafka.Message) error {
 		return err
 	}
 
-	event, err := p.Service.ProcessEvent(context.TODO(), employeeEvent.ID, *msg.TopicPartition.Topic)
-	if err != nil {
-		return err
-	}
-
 	err = p.Service.CreateEmployee(context.TODO(), employeeEvent.Employee.ID)
-	if err != nil {
-		p.Service.Repository.PublishEvent(context.TODO(), string(msg.Value), *msg.TopicPartition.Topic, employeeEvent.Employee.ID)
-		return err
-	}
-
-	err = p.Service.CompleteEvent(context.TODO(), event.ID)
 	if err != nil {
 		return err
 	}
@@ -92,18 +126,7 @@ func (p *KafkaProcessor) createCompany(msg *ckafka.Message) error {
 		return err
 	}
 
-	event, err := p.Service.ProcessEvent(context.TODO(), companyEvent.ID, *msg.TopicPartition.Topic)
-	if err != nil {
-		return err
-	}
-
 	err = p.Service.CreateCompany(context.TODO(), companyEvent.Company.ID)
-	if err != nil {
-		p.Service.Repository.PublishEvent(context.TODO(), string(msg.Value), *msg.TopicPartition.Topic, companyEvent.Company.ID)
-		return err
-	}
-
-	err = p.Service.CompleteEvent(context.TODO(), event.ID)
 	if err != nil {
 		return err
 	}
@@ -118,18 +141,7 @@ func (p *KafkaProcessor) addEmployeeToCompany(msg *ckafka.Message) error {
 		return err
 	}
 
-	event, err := p.Service.ProcessEvent(context.TODO(), companyEmployeeEvent.ID, *msg.TopicPartition.Topic)
-	if err != nil {
-		return err
-	}
-
 	err = p.Service.AddEmployeeToCompany(context.TODO(), companyEmployeeEvent.CompanyID, companyEmployeeEvent.EmployeeID)
-	if err != nil {
-		p.Service.Repository.PublishEvent(context.TODO(), string(msg.Value), *msg.TopicPartition.Topic, companyEmployeeEvent.CompanyID)
-		return err
-	}
-
-	err = p.Service.CompleteEvent(context.TODO(), event.ID)
 	if err != nil {
 		return err
 	}

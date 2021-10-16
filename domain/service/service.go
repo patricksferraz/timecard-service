@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 
 	"github.com/c-4u/timecard-service/domain/entity"
 	"github.com/c-4u/timecard-service/domain/repository"
@@ -70,10 +69,10 @@ func (s *Service) AddEmployeeToCompany(ctx context.Context, companyID, employeeI
 	return nil
 }
 
-func (s *Service) ProcessEvent(ctx context.Context, id, topic string) (*entity.Event, error) {
+func (s *Service) ProcessEvent(ctx context.Context, id, resume string) (*entity.Event, error) {
 	event, err := s.Repository.FindEvent(ctx, id)
 	if err != nil {
-		event, err = entity.NewEvent(id, topic)
+		event, err = entity.NewEvent(id, resume)
 		if err != nil {
 			return nil, err
 		}
@@ -86,11 +85,12 @@ func (s *Service) ProcessEvent(ctx context.Context, id, topic string) (*entity.E
 		return event, nil
 	}
 
-	if event.IsCompleted() {
-		return nil, errors.New("event is already completed")
+	err = event.AddAttempt()
+	if err != nil {
+		s.Repository.SaveEvent(ctx, event)
+		return nil, err
 	}
 
-	event.AddAttempt()
 	err = s.Repository.SaveEvent(ctx, event)
 	if err != nil {
 		return nil, err
@@ -106,6 +106,25 @@ func (s *Service) CompleteEvent(ctx context.Context, id string) error {
 	}
 
 	err = event.Complete()
+	if err != nil {
+		return err
+	}
+
+	err = s.Repository.SaveEvent(ctx, event)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) FailEvent(ctx context.Context, id string) error {
+	event, err := s.Repository.FindEvent(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	err = event.Fail()
 	if err != nil {
 		return err
 	}
