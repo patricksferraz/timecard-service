@@ -14,6 +14,6 @@ func StartKafkaServer(database *db.Postgres, kafkaConsumer *external.KafkaConsum
 	service := service.NewService(repository)
 
 	fmt.Println("kafka pocessor has been started")
-	processor := NewKafkaProcessor(service, kafkaConsumer, kafkaProducer)
+	processor := NewKafkaProcessor(service, kafkaConsumer)
 	processor.Consume()
 }

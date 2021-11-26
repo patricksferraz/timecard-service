@@ -15,14 +15,12 @@ import (
 type KafkaProcessor struct {
 	Service *service.Service
 	Kc      *external.KafkaConsumer
-	Kp      *external.KafkaProducer
 }
 
-func NewKafkaProcessor(service *service.Service, kafkaConsumer *external.KafkaConsumer, kafkaProducer *external.KafkaProducer) *KafkaProcessor {
+func NewKafkaProcessor(service *service.Service, kafkaConsumer *external.KafkaConsumer) *KafkaProcessor {
 	return &KafkaProcessor{
 		Service: service,
 		Kc:      kafkaConsumer,
-		Kp:      kafkaProducer,
 	}
 }
 
@@ -32,7 +30,10 @@ func (p *KafkaProcessor) Consume() {
 		msg, err := p.Kc.Consumer.ReadMessage(-1)
 		if err == nil {
 			// fmt.Println(string(msg.Value))
-			p.processMessage(msg)
+			err := p.processMessage(msg)
+			if err != nil {
+				fmt.Println(err)
+			}
 		}
 	}
 }
@@ -57,11 +58,11 @@ func (p *KafkaProcessor) completeEvent(event *entity.Event) error {
 	return err
 }
 
-func (p *KafkaProcessor) processMessage(msg *ckafka.Message) {
+func (p *KafkaProcessor) processMessage(msg *ckafka.Message) error {
 
 	event, err := p.processEvent(msg)
 	if err != nil {
-		fmt.Println("event processing error ", err)
+		return fmt.Errorf("event processing error %s", err)
 	}
 
 	switch _topic := *msg.TopicPartition.Topic; _topic {
@@ -69,29 +70,61 @@ func (p *KafkaProcessor) processMessage(msg *ckafka.Message) {
 		// TODO: add fault tolerance
 		err := p.createEmployee(msg)
 		if err != nil {
-			fmt.Println("creation error ", err)
 			p.retry(msg)
+			return fmt.Errorf("creation employee error %s", err)
 		}
 	case topic.NEW_COMPANY:
 		err := p.createCompany(msg)
 		if err != nil {
-			fmt.Println("creation error ", err)
 			p.retry(msg)
+			return fmt.Errorf("creation company error %s", err)
 		}
 	case topic.ADD_EMPLOYEE_TO_COMPANY:
 		err := p.addEmployeeToCompany(msg)
 		if err != nil {
-			fmt.Println("addition error ", err)
 			p.retry(msg)
+			return fmt.Errorf("addition employee to company error %s", err)
+		}
+	case topic.NEW_WORK_SCALE:
+		err := p.createWorkScale(msg)
+		if err != nil {
+			p.retry(msg)
+			return fmt.Errorf("creation work scale error %s", err)
+		}
+	case topic.ADD_WORK_SCALE_TO_EMPLOYEE:
+		err := p.addWorkScaleToEmployee(msg)
+		if err != nil {
+			p.retry(msg)
+			return fmt.Errorf("addition work scale to employee error %s", err)
+		}
+	case topic.ADD_CLOCK_TO_WORK_SCALE:
+		err := p.addClockToWorkScale(msg)
+		if err != nil {
+			p.retry(msg)
+			return fmt.Errorf("addition clock to work scale error %s", err)
+		}
+	case topic.UPDATE_CLOCK:
+		err := p.updateClock(msg)
+		if err != nil {
+			p.retry(msg)
+			return fmt.Errorf("update clock error %s", err)
+		}
+	case topic.DELETE_CLOCK:
+		err := p.deleteClock(msg)
+		if err != nil {
+			p.retry(msg)
+			return fmt.Errorf("delete clock error %s", err)
 		}
 	default:
-		fmt.Println("not a valid topic", string(msg.Value))
+		return fmt.Errorf("not a valid topic %s", string(msg.Value))
 	}
 
 	err = p.completeEvent(event)
 	if err != nil {
-		fmt.Println("event completion error ", err)
+		return fmt.Errorf("event completion error %s", err)
 	}
+
+	return nil
 }
 
 func (p *KafkaProcessor) retry(msg *ckafka.Message) error {
@@ -142,6 +175,81 @@ func (p *KafkaProcessor) addEmployeeToCompany(msg *ckafka.Message) error {
 	}
 
 	err = p.Service.AddEmployeeToCompany(context.TODO(), companyEmployeeEvent.CompanyID, companyEmployeeEvent.EmployeeID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *KafkaProcessor) createWorkScale(msg *ckafka.Message) error {
+	workScaleEvent := schema.NewWorkScaleEvent()
+	err := workScaleEvent.ParseJson(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Service.CreateWorkScale(context.TODO(), workScaleEvent.WorkScale.ID, workScaleEvent.WorkScale.CompanyID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *KafkaProcessor) addWorkScaleToEmployee(msg *ckafka.Message) error {
+	workScaleEmployeeEvent := schema.NewWorkScaleEmployeeEvent()
+	err := workScaleEmployeeEvent.ParseJson(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Service.AddWorkScaleToEmployee(context.TODO(), workScaleEmployeeEvent.CompanyID, workScaleEmployeeEvent.EmployeeID, workScaleEmployeeEvent.WorkScaleID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *KafkaProcessor) addClockToWorkScale(msg *ckafka.Message) error {
+	clockEvent := schema.NewClockEvent()
+	err := clockEvent.ParseJson(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Service.AddClockToWorkScale(context.TODO(), clockEvent.Clock.ID, clockEvent.Clock.Type, clockEvent.Clock.Clock, clockEvent.Clock.Timezone, clockEvent.Clock.WorkScaleID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *KafkaProcessor) updateClock(msg *ckafka.Message) error {
+	clockEvent := schema.NewClockEvent()
+	err := clockEvent.ParseJson(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Service.UpdateClock(context.TODO(), clockEvent.Clock.Type, clockEvent.Clock.Clock, clockEvent.Clock.Timezone, clockEvent.Clock.WorkScaleID, clockEvent.Clock.ID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *KafkaProcessor) deleteClock(msg *ckafka.Message) error {
+	deleteClockEvent := schema.NewDeleteClockEvent()
+	err := deleteClockEvent.ParseJson(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	err = p.Service.DeleteClock(context.TODO(), deleteClockEvent.WorkScaleID, deleteClockEvent.ClockID)
 	if err != nil {
 		return err
 	}

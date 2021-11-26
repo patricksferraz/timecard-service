@@ -11,8 +11,9 @@ func init() {
 }
 
 type Company struct {
-	Base      `json:",inline" valid:"required"`
-	Employees []*Employee `json:"-" gorm:"many2many:companies_employees" valid:"-"`
+	Base       `json:",inline" valid:"required"`
+	Employees  []*Employee  `json:"-" gorm:"many2many:companies_employees" valid:"-"`
+	WorkScales []*WorkScale `json:"-" gorm:"column:work_scales;foreignKey:CompanyID" valid:"-"`
 }
 
 func NewCompany(id string) (*Company, error) {

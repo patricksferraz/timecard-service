@@ -11,8 +11,7 @@ func init() {
 }
 
 type Employee struct {
-	Base `json:",inline" valid:"required"`
-	// TimeRecords []*TimeRecord `json:"-" gorm:"ForeignKey:EmployeeID" valid:"-"`
+	Base      `json:",inline" valid:"required"`
 	Companies []*Company `json:"-" gorm:"many2many:companies_employees" valid:"-"`
 }
 
@@ -34,9 +33,26 @@ func (e *Employee) isValid() error {
 	return err
 }
 
-func (e *Employee) AddCompany(company *Company) error {
-	e.Companies = append(e.Companies, company)
-	e.UpdatedAt = time.Now()
-	err := e.isValid()
-	return err
-}
+// func (e *Employee) AddCompany(company *Company) error {
+// 	e.Companies = append(e.Companies, company)
+// 	e.UpdatedAt = time.Now()
+// 	err := e.isValid()
+// 	return err
+// }
+
+// func (e *Employee) AddScale(scale *Scale) error {
+// 	e.Scales = append(e.Scales, scale)
+// 	e.UpdatedAt = time.Now()
+// 	err := e.isValid()
+// 	return err
+// }
+
+// func (e *Employee) GetCompany(companyID string) (*Company, error) {
+// 	for _, company := range e.Companies {
+// 		if company.ID == companyID {
+// 			return company, nil
+// 		}
+// 	}
+
+// 	return nil, fmt.Errorf("employee does not belong to the company %s", companyID)
+// }

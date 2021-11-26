@@ -6,6 +6,7 @@ import (
 
 	"github.com/asaskevich/govalidator"
 	uuid "github.com/satori/go.uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func init() {
@@ -13,27 +14,31 @@ func init() {
 }
 
 type Epoch struct {
-	Base          `bson:",inline" valid:"-"`
-	StartRecordID *string     `json:"start_record,omitempty" gorm:"column:start_record;not null;unique_index:idx_employee_company_start" valid:"uuid"`
-	StartRecord   *TimeRecord `json:"-" valid:"-"`
-	EndRecordID   *string     `json:"end_record,omitempty" gorm:"column:end_record;unique_index:idx_employee_company_end" valid:"uuid,optional"`
-	EndRecord     *TimeRecord `json:"-" valid:"-"`
-	Status        EpochStatus `json:"status" gorm:"column:status;not null" valid:"epochStatus"`
-	EmployeeID    *string     `json:"employee_id,omitempty" gorm:"column:employee_id;type:uuid;not null;unique_index:idx_employee_company_start,idx_employee_company_end" bson:"employee_id" valid:"uuid"`
-	Employee      *Employee   `json:"-" valid:"-"`
-	CompanyID     *string     `json:"company_id,omitempty" gorm:"column:company_id;type:uuid;not null;unique_index:idx_employee_company_start,idx_employee_company_end" bson:"company_id" valid:"uuid"`
-	Company       *Company    `json:"-" valid:"-"`
+	Base           `bson:",inline" valid:"-"`
+	InputRecordID  *string       `json:"input_record,omitempty" gorm:"column:input_record;not null;unique_index:idx_employee_company_input" valid:"uuid"`
+	InputRecord    *TimeRecord   `json:"-" valid:"-"`
+	OutputRecordID *string       `json:"output_record,omitempty" gorm:"column:output_record;unique_index:idx_employee_company_output" valid:"uuid,optional"`
+	OutputRecord   *TimeRecord   `json:"-" valid:"-"`
+	WorkedHours    time.Duration `json:"worked_hours,omitempty" gorm:"column:worked_hours" valid:"-"`
+	Status         EpochStatus   `json:"status" gorm:"column:status;not null" valid:"epochStatus"`
+	EmployeeID     *string       `json:"employee_id,omitempty" gorm:"column:employee_id;type:uuid;not null;unique_index:idx_employee_company_input,idx_employee_company_output" bson:"employee_id" valid:"uuid"`
+	Employee       *Employee     `json:"-" valid:"-"`
+	CompanyID      *string       `json:"company_id,omitempty" gorm:"column:company_id;type:uuid;not null;unique_index:idx_employee_company_input,idx_employee_company_output" bson:"company_id" valid:"uuid"`
+	Company        *Company      `json:"-" valid:"-"`
+	Token          *string       `json:"-" gorm:"column:token;type:varchar(25);not null" valid:"-"`
 }
 
-func NewEpoch(startRecord *TimeRecord, employee *Employee, company *Company) (*Epoch, error) {
+func NewEpoch(inputRecord *TimeRecord, employee *Employee, company *Company) (*Epoch, error) {
+	token := primitive.NewObjectID().Hex()
 	epoch := Epoch{
-		StartRecordID: &startRecord.ID,
-		StartRecord:   startRecord,
+		InputRecordID: &inputRecord.ID,
+		InputRecord:   inputRecord,
 		Status:        EPOCH_PENDING,
 		EmployeeID:    &employee.ID,
 		Employee:      employee,
 		CompanyID:     &company.ID,
 		Company:       company,
+		Token:         &token,
 	}
 
 	epoch.ID = uuid.NewV4().String()
@@ -52,23 +57,45 @@ func (t *Epoch) isValid() error {
 	return err
 }
 
-func (e *Epoch) Complete() error {
+func (e *Epoch) Complete(outputRecord *TimeRecord) error {
 
-	if e.Status == EPOCH_COMPLETED {
-		return errors.New("the epoch has already been completed")
+	if e.Status == EPOCH_PROCESSED {
+		return errors.New("the processed epoch cannot be completed")
 	}
 
 	if e.Status == EPOCH_FAILED {
 		return errors.New("the failed epoch cannot be completed")
 	}
 
+	e.OutputRecordID = &outputRecord.ID
+	e.OutputRecord = outputRecord
 	e.Status = EPOCH_COMPLETED
 	e.UpdatedAt = time.Now()
 	err := e.isValid()
 	return err
 }
 
+func (e *Epoch) Process() error {
+
+	if e.Status == EPOCH_FAILED {
+		return errors.New("the failed epoch cannot be processed")
+	}
+
+	if e.Status == EPOCH_PROCESSED {
+		return errors.New("the epoch has already been processed")
+	}
+
+	e.Status = EPOCH_PROCESSED
+	e.UpdatedAt = time.Now()
+	err := e.isValid()
+	return err
+}
+
 func (e *Epoch) Fail() error {
+
+	if e.Status == EPOCH_PROCESSED {
+		return errors.New("the processed epoch cannot be failed")
+	}
 
 	if e.Status == EPOCH_COMPLETED {
 		return errors.New("the completed epoch cannot be failed")

@@ -1,6 +1,8 @@
 package schema
 
 import (
+	"encoding/json"
+
 	"github.com/asaskevich/govalidator"
 )
 
@@ -16,4 +18,23 @@ type CompanyEmployeeEvent struct {
 
 func NewCompanyEmployeeEvent() *CompanyEmployeeEvent {
 	return &CompanyEmployeeEvent{}
+}
+
+func (e *CompanyEmployeeEvent) isValid() error {
+	_, err := govalidator.ValidateStruct(e)
+	return err
+}
+
+func (e *CompanyEmployeeEvent) ParseJson(data []byte) error {
+	err := json.Unmarshal(data, e)
+	if err != nil {
+		return err
+	}
+
+	err = e.isValid()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

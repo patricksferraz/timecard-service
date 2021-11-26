@@ -40,5 +40,13 @@ func (p *Postgres) Debug(enable bool) {
 }
 
 func (p *Postgres) Migrate() {
-	p.Db.AutoMigrate(&entity.Employee{}, &entity.Company{}, &entity.Event{})
+	p.Db.AutoMigrate(
+		&entity.Employee{},
+		&entity.Company{},
+		&entity.Event{},
+		&entity.Clock{},
+		&entity.WorkScale{},
+		&entity.CompaniesEmployee{},
+	)
+	// p.Db.SetJoinTableHandler(&entity.Company{}, "Employees", &entity.CompanyEmployee{})
 }

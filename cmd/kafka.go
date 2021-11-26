@@ -68,6 +68,7 @@ func kafkaCmd() *cobra.Command {
 				log.Fatal("cannot start kafka producer", err)
 			}
 
+			go kp.DeliveryReport()
 			kafka.StartKafkaServer(database, kc, kp)
 		},
 	}
