@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/c-4u/timecard-service/utils"
+	"github.com/patricksferraz/timecard-service/utils"
 )
 
 func init() {

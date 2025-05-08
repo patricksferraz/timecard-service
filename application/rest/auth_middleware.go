@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/c-4u/timecard-service/domain/entity"
-	"github.com/c-4u/timecard-service/infrastructure/external"
 	"github.com/gin-gonic/gin"
+	"github.com/patricksferraz/timecard-service/domain/entity"
+	"github.com/patricksferraz/timecard-service/infrastructure/external"
 )
 
 type AuthMiddleware struct {

@@ -3,8 +3,8 @@ package external
 import (
 	"context"
 
-	"github.com/c-4u/timecard-service/domain/entity"
-	"github.com/c-4u/timecard-service/proto/pb"
+	"github.com/patricksferraz/timecard-service/domain/entity"
+	"github.com/patricksferraz/timecard-service/proto/pb"
 	"google.golang.org/grpc"
 )
 

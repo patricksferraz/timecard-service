@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/c-4u/timecard-service/domain/service"
+	"github.com/patricksferraz/timecard-service/domain/service"
 )
 
 type RestService struct {

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,13 +21,13 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/c-4u/timecard-service/application/kafka"
-	"github.com/c-4u/timecard-service/infrastructure/db"
-	"github.com/c-4u/timecard-service/infrastructure/external"
-	"github.com/c-4u/timecard-service/infrastructure/external/topic"
-	"github.com/c-4u/timecard-service/utils"
 	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/joho/godotenv"
+	"github.com/patricksferraz/timecard-service/application/kafka"
+	"github.com/patricksferraz/timecard-service/infrastructure/db"
+	"github.com/patricksferraz/timecard-service/infrastructure/external"
+	"github.com/patricksferraz/timecard-service/infrastructure/external/topic"
+	"github.com/patricksferraz/timecard-service/utils"
 	"github.com/spf13/cobra"
 )
 

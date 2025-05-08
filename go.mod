@@ -1,4 +1,4 @@
-module github.com/c-4u/timecard-service
+module github.com/patricksferraz/timecard-service
 
 go 1.16
 

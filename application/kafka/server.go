@@ -3,10 +3,10 @@ package kafka
 import (
 	"fmt"
 
-	"github.com/c-4u/timecard-service/domain/service"
-	"github.com/c-4u/timecard-service/infrastructure/db"
-	"github.com/c-4u/timecard-service/infrastructure/external"
-	"github.com/c-4u/timecard-service/infrastructure/repository"
+	"github.com/patricksferraz/timecard-service/domain/service"
+	"github.com/patricksferraz/timecard-service/infrastructure/db"
+	"github.com/patricksferraz/timecard-service/infrastructure/external"
+	"github.com/patricksferraz/timecard-service/infrastructure/repository"
 )
 
 func StartKafkaServer(database *db.Postgres, kafkaConsumer *external.KafkaConsumer, kafkaProducer *external.KafkaProducer) {

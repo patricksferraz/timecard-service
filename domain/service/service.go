@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/c-4u/timecard-service/domain/entity"
-	"github.com/c-4u/timecard-service/domain/repository"
+	"github.com/patricksferraz/timecard-service/domain/entity"
+	"github.com/patricksferraz/timecard-service/domain/repository"
 )
 
 type Service struct {

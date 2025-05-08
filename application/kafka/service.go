@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/c-4u/timecard-service/application/kafka/schema"
-	"github.com/c-4u/timecard-service/domain/entity"
-	"github.com/c-4u/timecard-service/domain/service"
-	"github.com/c-4u/timecard-service/infrastructure/external"
-	"github.com/c-4u/timecard-service/infrastructure/external/topic"
 	ckafka "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/patricksferraz/timecard-service/application/kafka/schema"
+	"github.com/patricksferraz/timecard-service/domain/entity"
+	"github.com/patricksferraz/timecard-service/domain/service"
+	"github.com/patricksferraz/timecard-service/infrastructure/external"
+	"github.com/patricksferraz/timecard-service/infrastructure/external/topic"
 )
 
 type KafkaProcessor struct {
